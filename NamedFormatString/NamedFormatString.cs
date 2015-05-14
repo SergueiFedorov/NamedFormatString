@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Dynamic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -9,29 +11,6 @@ namespace SF
 
     public static class NamedFormatString
     {
-        private struct StartEndPair
-        {
-            public int start;
-            public int end;
-        }
-
-        private static string StripParamterAtLocation(string parameterString, StartEndPair location)
-        {
-            StringBuilder aggregate = new StringBuilder();
-            int counter = location.start;
-            while (counter != location.end)
-            {
-                aggregate.Append(parameterString[counter]);
-                counter++;
-
-                if (counter == parameterString.Length)
-                {
-                    throw new FormatException();
-                }
-            }
-
-            return aggregate.ToString();
-        }
 
         private static bool isEscapeCharacter(string paramString, int currentPosition, char character)
         {
@@ -41,25 +20,6 @@ namespace SF
             }
             return false;
         }
-
-        /*
-        private static bool isLeftEscapeCharacter(string paramString, int currentPosition)
-        {
-            if (currentPosition + 1 < paramString.Length && paramString[currentPosition + 1] == '{')
-            {
-                return true;
-            }
-            return false;
-        }
-
-        private static bool isRightEscapeCharacter(string paramString, int currentPosition)
-        {
-            if (currentPosition + 1 < paramString.Length && paramString[currentPosition + 1] == '}')
-            {
-                return true;
-            }
-            return false;
-        }*/
 
         private static string ExtractParamWord(string paramString, int currentPosition, out int paramSize)
         {
@@ -151,9 +111,38 @@ namespace SF
             return sBuilder.ToString();
         }
 
-        public static String Format(string argString, Dictionary<string, string> words)
+        public static String Format(string format, Dictionary<string, string> words)
         {
-            return InsertArguments(argString, words);
+            if (format == null)
+            {
+                throw new ArgumentNullException();
+            }
+            else if (words == null)
+            {
+                throw new FormatException();
+            }
+
+            return InsertArguments(format, words);
+        }
+
+        public static String Format(string format, dynamic argObj)
+        {
+            Dictionary<string, string> words = new Dictionary<string, string>();
+            foreach (PropertyInfo prop in ((object)argObj).GetType().GetProperties())
+            {
+                var propValue = prop.GetValue(argObj);
+
+                var type = (Type)propValue.GetType();
+
+                if (type.IsConstructedGenericType)
+                {
+                    throw new ArgumentException("Nested dynamic/anonymous objects have undefined behavior");
+                }
+
+                words.Add(prop.Name, prop.GetValue(argObj).ToString() );
+            }
+
+            return Format(format, words);
         }
     }
 }
