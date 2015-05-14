@@ -33,122 +33,127 @@ namespace SF
             return aggregate.ToString();
         }
 
-        /// <summary>
-        /// Finds the inner most bracket set
-        /// </summary>
-        /// <param name="paramString"></param>
-        /// <param name="currentLocation"></param>
-        /// <returns></returns>
-        private static StartEndPair FindNextBracketSet(string paramString, int currentLocation)
+        private static bool isEscapeCharacter(string paramString, int currentPosition, char character)
         {
-            StartEndPair pair;
+            if (currentPosition + 1 < paramString.Length && paramString[currentPosition + 1] == character)
+            {
+                return true;
+            }
+            return false;
+        }
 
-            int innerMostOpeningBracket = -1;
-            int counter = currentLocation;
+        /*
+        private static bool isLeftEscapeCharacter(string paramString, int currentPosition)
+        {
+            if (currentPosition + 1 < paramString.Length && paramString[currentPosition + 1] == '{')
+            {
+                return true;
+            }
+            return false;
+        }
+
+        private static bool isRightEscapeCharacter(string paramString, int currentPosition)
+        {
+            if (currentPosition + 1 < paramString.Length && paramString[currentPosition + 1] == '}')
+            {
+                return true;
+            }
+            return false;
+        }*/
+
+        private static string ExtractParamWord(string paramString, int currentPosition, out int paramSize)
+        {
+            StringBuilder sBuilder = new StringBuilder();
+            int counter = currentPosition;
+
             while (counter < paramString.Length)
             {
-                if (paramString[counter] == '{')
+                if (paramString[counter] == '}')
                 {
-                    innerMostOpeningBracket = counter;
+                    if (isEscapeCharacter(paramString, counter, '}') == false)
+                    {
+                        break;
+                    }
                 }
 
-                if (innerMostOpeningBracket != -1 && paramString[counter] == '}')
-                {
-                    //Found the closing brace. Pop the top of the stack
-                    //for the inner most bracket
-                    pair.start = innerMostOpeningBracket;
-                    pair.end = counter;
-
-                    return pair;
-                }
+                sBuilder.Append(paramString[counter]);
 
                 counter++;
             }
 
-            //Function did not return. It means it ran off the string
-            //before finding a closing bracket
-            if (innerMostOpeningBracket != -1)
+            if (counter == paramString.Length)
             {
                 throw new FormatException();
             }
 
-            pair.start = -1;
-            pair.end = -1;
+            paramSize = counter - currentPosition;
 
-            return pair;
+            return sBuilder.ToString();
         }
 
-        private static Dictionary<string, int> StripOutParams(string paramString, out string resultParameterString)
+        private static string InsertArguments(string paramString, Dictionary<string, string> arguments)
         {
-            Dictionary<string, int> result = new Dictionary<string, int>();
+            StringBuilder sBuilder = new StringBuilder();
 
-            StringBuilder bracketStringBuilder = new StringBuilder();
-            StringBuilder reconstructedStringAggregate = new StringBuilder();
+            int position = 0;
+            char character = '\x0';
+            int length = paramString.Length;
 
-            int parameterIndex = 0;
-            int letterCounter = 0;
-
-            StartEndPair bracketLocationPair;
-
-            while ((bracketLocationPair = FindNextBracketSet(paramString, letterCounter)).end != -1)
+            while (position < paramString.Length)
             {
-                //Fill in the string up to the appropriate location
-                while (letterCounter < bracketLocationPair.start)
+                character = paramString[position];
+
+                if (character == '}')
                 {
-                    reconstructedStringAggregate.Append(paramString[letterCounter]);
-                    letterCounter++;
+                    if (isEscapeCharacter(paramString, position, '}'))
+                    {
+                        sBuilder.Append(character);
+                        position++;
+                    }
+                    else
+                    {
+                        throw new FormatException();
+                    }
+                }
+                else if (character == '{')
+                {
+                    if (isEscapeCharacter(paramString, position, '{'))
+                    {
+                        sBuilder.Append(character);
+                        position++;
+                    }
+                    else
+                    {
+                        position++;
+                        int paramterSize = 0;
+                        string paramWord = ExtractParamWord(paramString, position, out paramterSize);
+
+                        if (arguments.ContainsKey(paramWord))
+                        {
+                            sBuilder.Append(arguments[paramWord]);
+                        }
+                        else
+                        {
+                            throw new FormatException();
+                        }
+
+                        position += paramterSize;
+                    }
+                }
+                else
+                {
+                    sBuilder.Append(character);
                 }
 
-                bracketStringBuilder.Clear();
-
-                string resultString = StripParamterAtLocation(paramString, bracketLocationPair);
-
-                bracketStringBuilder.Append("{");
-                bracketStringBuilder.Append(parameterIndex);
-                bracketStringBuilder.Append("}");
-
-                result.Add(resultString, parameterIndex);
-
-                parameterIndex++;
-
-                letterCounter = bracketLocationPair.end + 1;
-
-                reconstructedStringAggregate.Append(bracketStringBuilder.ToString());
-            }
-                
-            //Finish off anything that is left at the end of the string
-            while (letterCounter < paramString.Length)
-            {
-                reconstructedStringAggregate.Append(paramString[letterCounter]);
-                letterCounter++;
+                position++;
             }
 
-            resultParameterString = reconstructedStringAggregate.ToString();
-
-            return result;
-        }
-
-        public static String Format(string argString, params string[] words)
-        {
-            string resultParamterString = null;
-            Dictionary<string, int> parameters = StripOutParams(argString, out resultParamterString);
-
-            return string.Format(resultParamterString, words);
+            return sBuilder.ToString();
         }
 
         public static String Format(string argString, Dictionary<string, string> words)
         {
-            string resultParamterString = null;
-            Dictionary<string, int> parameters = StripOutParams(argString, out resultParamterString);
-
-            string[] paramArray = new string[words.Keys.Count];
-
-            foreach (string paramName in words.Keys)
-            {
-                paramArray[parameters[paramName]] = words[paramName];
-            }
-
-            return string.Format(resultParamterString, paramArray);
+            return InsertArguments(argString, words);
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SF;
+using System.Collections.Generic;
 
 namespace Unit_Tests
 {
@@ -10,11 +11,9 @@ namespace Unit_Tests
         [TestMethod]
         public void ValidParams()
         {
-            string[] parameters = new[]
-            {
-                "ReplacementOne",
-                "ReplacementTwo"
-            };
+            Dictionary<string, string> parameters = new Dictionary<string, string>();
+            parameters.Add("FirstSlot", "ReplacementOne");
+            parameters.Add("SecondSlot", "ReplacementTwo");
 
             string resultString = NamedFormatString.Format("{FirstSlot} {SecondSlot}", parameters);
 
@@ -26,11 +25,9 @@ namespace Unit_Tests
         [ExpectedException(typeof(FormatException))]
         public void ValidParams_Enclosed_Fractured_Brackets()
         {
-            string[] parameters = new[]
-            {
-                "ReplacementOne",
-                "ReplacementTwo"
-            };
+            Dictionary<string, string> parameters = new Dictionary<string, string>();
+            parameters.Add("FirstSlot", "ReplacementOne");
+            parameters.Add("SecondSlot", "ReplacementTwo");
 
             //This is valid behavior because the brackets are enclosed
             string resultString = NamedFormatString.Format("{FirstSlot {SecondSlot}", parameters);
@@ -39,28 +36,23 @@ namespace Unit_Tests
         [TestMethod]
         public void ValidParams_Enclosed_Fractured_Double_Brackets()
         {
-            string[] parameters = new[]
-            {
-                "ReplacementOne",
-                "ReplacementTwo"
-            };
+            Dictionary<string, string> parameters = new Dictionary<string, string>();
+            parameters.Add("FirstSlot", "ReplacementOne");
+            parameters.Add("SecondSlot", "ReplacementTwo");
 
             //This is valid behavior because the brackets are enclosed
             string resultString = NamedFormatString.Format("{{FirstSlot {SecondSlot}", parameters);
 
             Assert.IsNotNull(resultString);
-            Assert.AreEqual(resultString, "{FirstSlot ReplacementOne");
+            Assert.AreEqual(resultString, "{FirstSlot ReplacementTwo");
         }
 
         [TestMethod]
         [ExpectedException(typeof(FormatException))]
         public void ValidParams_Enclosed_Missing_Close_Bracket()
         {
-
-            string[] parameters = new[]
-            {
-                "ReplacementOne"
-            };
+            Dictionary<string, string> parameters = new Dictionary<string, string>();
+            parameters.Add("FirstSlot", "ReplacementOne");
 
             //This is valid behavior because the brackets are enclosed
             string resultString = NamedFormatString.Format("{FirstSlot", parameters);
@@ -70,10 +62,8 @@ namespace Unit_Tests
         [ExpectedException(typeof(FormatException))]
         public void ValidParams_Enclosed_Missing_Open_Bracket()
         {
-            string[] parameters = new[]
-            {
-                "ReplacementOne"
-            };
+            Dictionary<string, string> parameters = new Dictionary<string, string>();
+            parameters.Add("FirstSlot", "ReplacementOne");
 
             //This is valid behavior because the brackets are enclosed
             string resultString = NamedFormatString.Format("FirstSlot}", parameters);
@@ -83,10 +73,7 @@ namespace Unit_Tests
         [ExpectedException(typeof(FormatException))]
         public void EmptyParams()
         {
-            string[] parameters = new string[]
-            {
-
-            };
+            Dictionary<string, string> parameters = new Dictionary<string, string>();
 
             //This is valid behavior because the brackets are enclosed
             string resultString = NamedFormatString.Format("{FirstSlot}", parameters);
@@ -95,10 +82,8 @@ namespace Unit_Tests
         [TestMethod]
         public void NestedBrackets()
         {
-            string[] parameters = new string[]
-            {
-                "ReplacementOne"
-            };
+            Dictionary<string, string> parameters = new Dictionary<string, string>();
+            parameters.Add("FirstSlot", "ReplacementOne");
 
             //This is actually a valid behavior from String.Format
             string resultString = NamedFormatString.Format("{{FirstSlot}}", parameters);
